@@ -21,9 +21,6 @@ const TabCard: React.FC<TabCardProps> = ({ tab, onClose, onPin }) => {
 
   const handleDoubleClick = async () => {
     if (tab.id === undefined) return;
-    console.log(
-      `[TabDeclutter] Double-clicked tab ID: ${tab.id}. Switching to tab.`
-    );
     try {
       // Activate the tab
       await chrome.tabs.update(tab.id, { active: true });

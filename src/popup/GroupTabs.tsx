@@ -1,6 +1,13 @@
 import React from "react";
-import { TabGroup } from "./App"; // Import the TabGroup interface
 import TabCard from "./TabCard.tsx";
+
+interface TabGroup {
+  id: string;
+  title: string;
+  tabs: chrome.tabs.Tab[];
+  collapsed: boolean;
+  chromeGroupId?: string;
+}
 
 interface GroupTabsProps {
   groups: TabGroup[];
