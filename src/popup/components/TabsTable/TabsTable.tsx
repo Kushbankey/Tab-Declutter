@@ -77,11 +77,17 @@ const TabsTable: React.FC<TabsTableProps> = ({
           {tabs.map((tab) => (
             <TR
               key={tab.id}
-              className={selectedTabIds.has(tab.id) ? "selected-row" : ""}
+              groupColor={tab.groupColor}
+              isSelected={selectedTabIds.has(tab.id)}
               onDoubleClick={() => {
                 onSwitchToTab(tab.id, tab.originalTab.windowId);
               }}
               aria-selected={selectedTabIds.has(tab.id)}
+              title={
+                tab.groupName
+                  ? `Group: ${tab.groupName}\n${tab.title}`
+                  : tab.title
+              }
             >
               <TD>
                 <CheckboxInput
@@ -91,15 +97,40 @@ const TabsTable: React.FC<TabsTableProps> = ({
                 />
               </TD>
               <TD className="icon-cell">
-                {tab.favIconUrl &&
-                !tab.favIconUrl.startsWith("chrome-extension://") ? (
-                  <FaviconImage
-                    src={tab.favIconUrl}
-                    alt={`${tab.title} favicon`}
-                  />
-                ) : (
-                  <span></span> // Placeholder for missing or extension favicons
-                )}
+                {(() => {
+                  const isChromeInternalPage =
+                    tab.originalTab.url?.startsWith("chrome://") ||
+                    tab.originalTab.url?.startsWith("chrome-extension://");
+                  const isProperFavicon =
+                    tab.favIconUrl &&
+                    (tab.favIconUrl.startsWith("http://") ||
+                      tab.favIconUrl.startsWith("https://") ||
+                      tab.favIconUrl.startsWith("data:"));
+
+                  if (isProperFavicon && !isChromeInternalPage) {
+                    return (
+                      <FaviconImage
+                        src={tab.favIconUrl}
+                        alt={`${tab.title} favicon`}
+                        onError={(
+                          e: React.SyntheticEvent<HTMLImageElement, Event>
+                        ) => {
+                          (e.target as HTMLImageElement).src =
+                            chrome.runtime.getURL("globe-solid.svg");
+                          (e.target as HTMLImageElement).alt =
+                            "Default globe icon";
+                        }}
+                      />
+                    );
+                  } else {
+                    return (
+                      <FaviconImage
+                        src={chrome.runtime.getURL("globe-solid.svg")}
+                        alt="Default globe icon"
+                      />
+                    );
+                  }
+                })()}
               </TD>
               <TD>
                 <CategoryBadge>{tab.category}</CategoryBadge>

@@ -1,5 +1,33 @@
 import styled from "styled-components";
 
+// Helper to map Chrome's group colors to CSS-friendly values
+// Using a richer palette than default browser named colors for better aesthetics
+const getGroupColorCss = (color?: chrome.tabGroups.ColorEnum): string => {
+  if (!color) return "transparent"; // Default if no color
+  switch (color) {
+    case "grey":
+      return "#9ca3af"; // Tailwind Gray-400, Chrome "grey"
+    case "blue":
+      return "#60a5fa"; // Tailwind Blue-400, Chrome "blue"
+    case "red":
+      return "#f87171"; // Tailwind Red-400, Chrome "red"
+    case "yellow":
+      return "#facc15"; // Tailwind Yellow-400, Chrome "yellow"
+    case "green":
+      return "#4ade80"; // Tailwind Green-400, Chrome "green"
+    case "pink":
+      return "#f472b6"; // Tailwind Pink-400, Chrome "pink"
+    case "purple":
+      return "#a78bfa"; // Tailwind Violet-400, Chrome "purple"
+    case "cyan":
+      return "#22d3ee"; // Tailwind Cyan-400, Chrome "cyan"
+    case "orange":
+      return "#fb923c"; // Tailwind Orange-400, Chrome "orange"
+    default:
+      return "transparent"; // Fallback
+  }
+};
+
 export const TableWrapper = styled.div`
   overflow-x: auto; // In case content is wider than container
   border: 1px solid #e5e7eb; // Border like in the image
@@ -24,17 +52,41 @@ export const TBody = styled.tbody`
   // but good to have for consistency or future styling.
 `;
 
-export const TR = styled.tr`
-  &:not(:last-child) {
-    border-bottom: 1px solid #e5e7eb; // Border between rows
+export const TR = styled.tr<{
+  groupColor?: chrome.tabGroups.ColorEnum;
+  isSelected?: boolean; // Keep isSelected for background highlighting
+}>`
+  border-bottom: 1px solid #e5e7eb; // Keep default bottom border for all rows
+  // Apply left border if groupColor is provided
+  border-left: ${(props) =>
+    props.groupColor
+      ? `4px solid ${getGroupColorCss(props.groupColor)}`
+      : "none"};
+
+  // Adjust padding for the first cell if there's a group border, to prevent content overlap
+  &:has(td:first-child) {
+    & > td:first-child {
+      padding-left: ${(props) => (props.groupColor ? "12px" : "16px")};
+    }
   }
 
-  &.selected-row {
-    background-color: #eff6ff; // Light blue for selected rows (optional)
-  }
+  // Selected row styling (takes precedence if !props.groupColor for background)
+  // Or apply it on top of a non-colored background part.
+  background-color: ${(props) =>
+    props.isSelected
+      ? "#eff6ff"
+      : "transparent"}; // Light blue for selected rows
 
   &:hover {
-    background-color: #f9fafb; // Slight hover effect
+    background-color: ${(props) =>
+      props.isSelected
+        ? "#e0e7ff"
+        : "#f9fafb"}; // Darker blue for selected hover, light gray for normal hover
+  }
+
+  // Ensure last row doesn't have a bottom border if it's the very last TR of the table
+  &:last-child {
+    border-bottom: none;
   }
 `;
 
@@ -48,6 +100,7 @@ export const TH = styled.th`
   &.checkbox-header {
     width: 40px; // For checkbox
     padding-right: 0;
+    padding-left: 16px; // Ensure consistent padding for checkbox header
   }
   &.icon-header {
     width: 40px; // For icon

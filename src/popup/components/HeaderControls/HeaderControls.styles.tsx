@@ -14,7 +14,7 @@ export const LeftControls = styled.div`
   display: flex;
   align-items: center;
   gap: 8px;
-  width: 20%;
+  width: 200px; // Keep this to ensure search bar doesn't take full width initially
 `;
 
 export const RightControls = styled.div`
@@ -23,39 +23,35 @@ export const RightControls = styled.div`
   gap: 8px;
 `;
 
-export const FilterControlWrapper = styled.div`
-  position: relative; // For the dropdown positioning
-  display: flex;
-  align-items: center;
-  gap: 10px; // Space between label and button
-`;
-
 export const FilterLabel = styled.span`
   font-size: 14px;
   color: #4b5563; // Gray-600
   font-weight: 500;
+  margin-right: 4px; // Add a small margin if it's directly next to a dropdown
 `;
 
 export const SearchContainer = styled.div`
   position: relative;
   display: flex;
   align-items: center;
+  flex-grow: 1; // Allow search to take available space in LeftControls
 `;
 
 export const SearchIcon = styled.img`
   position: absolute;
-  left: 8px;
-  width: 20px;
-  height: 20px;
+  left: 10px; // Adjusted for better padding
+  width: 18px; // Slightly smaller to fit well
+  height: 18px;
   pointer-events: none; // So it doesn't interfere with input focus
+  opacity: 0.7; // Slightly less prominent
 `;
 
 export const SearchInputStyled = styled.input`
-  padding: 8px 12px 8px 35px; // Added left padding for the icon
+  padding: 8px 12px 8px 36px; // Adjusted left padding for the icon
   font-size: 14px;
   border: 1px solid #d1d5db; // Gray-300
   border-radius: 6px;
-  min-width: 160px;
+  width: 100%; // Take full width of its container (SearchContainer)
   background-color: #ffffff;
   color: #111827;
 
@@ -66,45 +62,19 @@ export const SearchInputStyled = styled.input`
   }
 `;
 
-export const FilterButton = styled.div`
-  display: inline-flex;
+export const GroupButton = styled.button`
+  // Changed to button for semantics
+  display: flex;
   align-items: center;
   gap: 6px;
   padding: 8px 12px;
   font-size: 14px;
-  font-weight: 500; // Medium weight
-  border: 1px solid #d1d5db; // Gray-300
+  font-weight: 500;
+  border: 1px solid #2563eb;
   border-radius: 6px;
-  background-color: #ffffff; // White background
-  color: #111827; // Gray-900 text
-  cursor: pointer;
-
-  &:hover {
-    background-color: #f9fafb; // Gray-50 on hover
-  }
-
-  &.active {
-    // Style for when the dropdown is open or button is active
-    background-color: #f3f4f6; // Gray-100
-    border-color: #9ca3af; // Gray-400
-  }
-
-  &.view-icon::before {
-    content: "\2630"; /* Hamburger/list icon placeholder */
-    font-size: 12px;
-  }
-`;
-
-export const ChevronIcon = styled.img`
-  width: 16px;
-  height: 16px;
-  // margin-left: 4px; // Remove, gap in FilterButton is enough
-`;
-
-export const GroupButton = styled(FilterButton)`
   background-color: #2563eb; // Blue-600
   color: white;
-  border-color: #2563eb;
+  cursor: pointer;
 
   &:hover {
     background-color: #1d4ed8; // Blue-700
@@ -113,96 +83,8 @@ export const GroupButton = styled(FilterButton)`
   &:disabled {
     background-color: #9ca3af; // Gray-400
     border-color: #9ca3af;
+    color: #e5e7eb; // Lighter text for disabled state
     cursor: not-allowed;
-  }
-`;
-
-export const DropdownMenu = styled.div`
-  position: absolute;
-  top: 100%; // Below the button
-  left: 0;
-  background-color: white;
-  border: 1px solid #d1d5db; // Gray-300
-  border-radius: 8px; // Match image
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1),
-    0 2px 4px -1px rgba(0, 0, 0, 0.06);
-  z-index: 20;
-  margin-top: 4px;
-  min-width: 150px; // Match image
-  padding: 8px; // Internal padding
-`;
-
-export const DropdownMenuItem = styled.button`
-  display: flex; // For aligning radio and text
-  align-items: center;
-  gap: 10px; // Space between radio and text
-  width: 100%;
-  text-align: left;
-  padding: 10px 12px; // Adjusted padding
-  font-size: 14px;
-  background: none;
-  border: none;
-  border-radius: 4px; // Slightly rounded corners for items
-  cursor: pointer;
-  color: #374151; // Gray-700
-  margin-bottom: 2px; // Space between items
-
-  &:hover {
-    background-color: #f3f4f6; // Gray-100
-  }
-
-  &.active {
-    // Active state styling will be handled by the radio circle mostly
-    // Optionally, slight background change or font weight if needed
-    // background-color: #eff6ff; // Light blue for active item
-    // font-weight: 500;
-  }
-`;
-
-export const RadioCircleOuter = styled.span`
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  border: 2px solid #adb5bd; // Gray-400
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: border-color 0.2s ease-in-out;
-
-  ${DropdownMenuItem}.active & {
-    border-color: #4f46e5; // Indigo-600
-  }
-`;
-
-export const RadioCircleInner = styled.span`
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background-color: transparent;
-  transition: background-color 0.2s ease-in-out;
-
-  ${DropdownMenuItem}.active & {
-    background-color: #4f46e5; // Indigo-600
-  }
-`;
-
-export const ClearFilterButton = styled.button`
-  display: block;
-  width: calc(100% - 16px); // Account for DropdownMenu padding
-  margin: 8px auto 0; // Margin top and center
-  text-align: left;
-  padding: 10px 12px;
-  font-size: 14px;
-  font-weight: 500;
-  background: none;
-  border: none;
-  border-top: 1px solid #e5e7eb; // Separator line
-  cursor: pointer;
-  color: #4f46e5; // Indigo-600
-  border-radius: 4px;
-
-  &:hover {
-    background-color: #f3f4f6; // Gray-100
   }
 `;
 
@@ -219,7 +101,7 @@ export const FiltersContainer = styled.div`
 export const FilterDropdownsRow = styled.div`
   display: flex;
   align-items: center;
-  gap: 8px; // Gap between "Filter by:" and first dropdown, and between dropdowns
+  gap: 12px; // Increased gap between "Filter by:" and first dropdown, and between dropdowns
 `;
 
 export const ActiveFiltersDisplay = styled.div`
@@ -228,6 +110,7 @@ export const ActiveFiltersDisplay = styled.div`
   gap: 12px;
   padding: 8px 0; // Some vertical padding
   flex-wrap: wrap; // Allow pills to wrap
+  min-height: 30px; // Ensure it takes up space even when empty, prevents layout shifts
 `;
 
 export const ResultsCount = styled.span`
@@ -240,6 +123,7 @@ export const FilterPillsList = styled.div`
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
+  flex-grow: 1; // Allow pill list to take available space
 `;
 
 export const FilterPill = styled.div`
@@ -248,7 +132,7 @@ export const FilterPill = styled.div`
   gap: 6px;
   background-color: #eef2ff; // Indigo-50 (light purple/blue)
   color: #4338ca; // Indigo-700
-  padding: 4px 8px;
+  padding: 4px 10px; // Slightly more horizontal padding
   border-radius: 16px; // Fully rounded
   font-size: 13px;
   font-weight: 500;
@@ -261,6 +145,7 @@ export const FilterPillCloseIcon = styled.img`
   height: 14px;
   cursor: pointer;
   opacity: 0.7;
+  transition: opacity 0.2s ease;
   &:hover {
     opacity: 1;
   }
@@ -273,9 +158,12 @@ export const ClearAllButton = styled.button`
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
-  padding: 4px;
+  padding: 4px 8px; // Add some padding
+  border-radius: 4px;
+  margin-left: auto; // Push to the right if space allows
 
   &:hover {
     text-decoration: underline;
+    background-color: #f3f4f6; // Slight hover background
   }
 `;

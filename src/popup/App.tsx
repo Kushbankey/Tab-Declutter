@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import TabsTable from "./components/TabsTable/TabsTable";
 import HeaderControls, {
   StatusFilterType,
+  PinnedFilterType,
 } from "./components/HeaderControls/HeaderControls";
 import HeaderComponent from "./components/HeaderComponent/HeaderComponent";
 import WindowAccordionItem from "./components/WindowAccordionItem/WindowAccordionItem";
@@ -12,7 +13,7 @@ import {
   MainContent,
   WindowAccordionListContainer,
 } from "./App.styles";
-import { DisplayTab } from "./types"; // Removed WindowWithTabs
+import { DisplayTab, GroupFilterValue } from "./types"; // Removed TabGroupForFilter
 import { useTabManagement } from "./hooks/useTabManagement"; // Import the hook
 import { useAccordion } from "./hooks/useAccordion"; // Import useAccordion
 import { useTabSelection } from "./hooks/useTabSelection"; // Import useTabSelection
@@ -25,7 +26,7 @@ function App() {
     isLoading,
     error,
     fetchAndProcessTabs,
-    // extensionWindowIdRef, // Not explicitly used by App after this refactor, managed within useTabManagement
+    availableTabGroups, // Destructure new state
   } = useTabManagement();
 
   // Tab Selection state and logic
@@ -58,11 +59,123 @@ function App() {
   const [activeSearchQuery, setActiveSearchQuery] = useState<string>("");
   const [activeStatusFilter, setActiveStatusFilter] =
     useState<StatusFilterType>("all");
+  const [activePinnedFilter, setActivePinnedFilter] =
+    useState<PinnedFilterType>("all");
+  const [activeGroupFilter, setActiveGroupFilter] =
+    useState<GroupFilterValue>("all"); // New state for group filter
+
+  // Helper function to filter tabs for a specific window
+  const getFilteredTabsForWindow = useCallback(
+    (windowTabs: DisplayTab[]) => {
+      return windowTabs
+        .filter((tab: DisplayTab) => {
+          const searchLower = activeSearchQuery.toLowerCase();
+          const matchesSearch =
+            !searchLower ||
+            tab.title.toLowerCase().includes(searchLower) ||
+            tab.category.toLowerCase().includes(searchLower) ||
+            tab.originalTab.url?.toLowerCase().includes(searchLower);
+          if (!matchesSearch) return false;
+
+          if (activeStatusFilter === "active" && tab.status !== "Active")
+            return false;
+          if (activeStatusFilter === "inactive" && tab.status !== "Inactive")
+            return false;
+
+          if (activePinnedFilter === "pinned" && !tab.originalTab.pinned)
+            return false;
+          if (activePinnedFilter === "unpinned" && tab.originalTab.pinned)
+            return false;
+
+          // Updated Group filter logic to use group names
+          if (activeGroupFilter === "none") {
+            if (tab.groupId !== undefined) return false; // Show only ungrouped (groupId is undefined)
+          } else if (activeGroupFilter !== "all") {
+            // If a specific group name is selected
+            if (tab.groupName !== activeGroupFilter) return false; // Show only tabs from the selected group NAME
+          }
+          // If activeGroupFilter is "all", no group-specific filtering is applied here.
+
+          return true;
+        })
+        .sort(
+          (a: DisplayTab, b: DisplayTab) =>
+            a.originalTab.index - b.originalTab.index
+        );
+    },
+    [
+      activeSearchQuery,
+      activeStatusFilter,
+      activePinnedFilter,
+      activeGroupFilter,
+    ]
+  );
 
   // Effect to call fetchAndProcessTabs with setters once App has them
   useEffect(() => {
     fetchAndProcessTabs(setActiveWindowAccordionId, setSelectedTabIds);
-  }, [fetchAndProcessTabs, setActiveWindowAccordionId, setSelectedTabIds]); // Add setSelectedTabIds
+  }, [fetchAndProcessTabs, setActiveWindowAccordionId, setSelectedTabIds]);
+
+  // Effect to open the most relevant window accordion when filters change
+  useEffect(() => {
+    if (groupedTabsByWindow.length === 0) {
+      setActiveWindowAccordionId(null); // No windows, no accordion to open
+      setSelectedTabIds(new Set());
+      return;
+    }
+
+    const isFiltering =
+      activeSearchQuery !== "" ||
+      activeStatusFilter !== "all" ||
+      activePinnedFilter !== "all" ||
+      activeGroupFilter !== "all";
+
+    if (!isFiltering) {
+      // If no filters are active, try to keep the current accordion open or open the first focused one.
+      // This part can be enhanced further if needed, but for now, let's ensure it doesn't close unnecessarily.
+      // Example: if an accordion is already open, don't change it unless filters force a change.
+      // For simplicity, if no filter is active, we don't auto-change the accordion here.
+      // The initial load logic in useTabManagement handles setting an initial active accordion.
+      return;
+    }
+
+    let bestWindowId: number | null = null;
+
+    // 1. Priority for specific group filter
+    if (activeGroupFilter !== "all" && activeGroupFilter !== "none") {
+      for (const windowGroup of groupedTabsByWindow) {
+        const filteredTabs = getFilteredTabsForWindow(windowGroup.tabs);
+        if (filteredTabs.length > 0) {
+          bestWindowId = windowGroup.windowId;
+          break; // Found a window with the selected group and other filters applied
+        }
+      }
+    }
+
+    // 2. Fallback for general filtering or if specific group not found prominently
+    if (bestWindowId === null) {
+      for (const windowGroup of groupedTabsByWindow) {
+        const filteredTabs = getFilteredTabsForWindow(windowGroup.tabs);
+        if (filteredTabs.length > 0) {
+          bestWindowId = windowGroup.windowId;
+          break; // Found the first window that has any results for the current filters
+        }
+      }
+    }
+
+    // 3. Apply the found best window ID or null if no window has matching tabs
+    setActiveWindowAccordionId(bestWindowId);
+    setSelectedTabIds(new Set()); // Always reset selection when filters cause accordion change
+  }, [
+    activeSearchQuery,
+    activeStatusFilter,
+    activePinnedFilter,
+    activeGroupFilter,
+    groupedTabsByWindow, // Important: ensure this is stable or memoized if it causes re-runs
+    setActiveWindowAccordionId,
+    setSelectedTabIds,
+    getFilteredTabsForWindow, // Added as it's used in the effect now
+  ]);
 
   const handleOpenInNewTab = () => {
     if (chrome.runtime && chrome.runtime.sendMessage) {
@@ -138,15 +251,24 @@ function App() {
       console.error("Group name cannot be empty or no tabs to group.");
       return;
     }
+    if (activeWindowAccordionId === null) {
+      console.error(
+        "[TabDeclutter] Cannot create group: No active window context."
+      );
+      // This case should ideally not be reached if UI prevents grouping without an active window.
+      return;
+    }
+
     const finalGroupName = customGroupNameInput.trim();
     if (!chrome.tabs?.group || !chrome.tabGroups?.update) {
-      console.error("Tab grouping API is not available.");
+      console.error("[TabDeclutter] Tab grouping API is not available.");
       return;
     }
 
     try {
       const newChromeGroupId = await chrome.tabs.group({
         tabIds: tabIdsToGroupForNaming,
+        createProperties: { windowId: activeWindowAccordionId }, // Explicitly set the windowId
       });
       await chrome.tabGroups.update(newChromeGroupId, {
         title: finalGroupName,
@@ -159,7 +281,6 @@ function App() {
       // fetchAndProcessTabs will be called by listeners in the hook
     } catch (e) {
       console.error("[TabDeclutter] Error creating/updating Chrome group:", e);
-      // setError from hook might not be appropriate here
     }
     closeGroupNamingModal();
   };
@@ -173,33 +294,14 @@ function App() {
     try {
       await chrome.windows.update(windowId, { focused: true });
       await chrome.tabs.update(tabId, { active: true });
-      // Consider if focusing a window/tab should also make its accordion active
-      // setActiveWindowAccordionId(windowId); // This could be a new behavior
     } catch (e) {
       console.error(`Error switching to tab ${tabId}:`, e);
-      // setError from hook might not be appropriate here
     }
   };
 
-  const filteredAndSortedTabsForActiveWindow = tabsForActiveWindow
-    .filter((tab: DisplayTab) => {
-      const searchLower = activeSearchQuery.toLowerCase();
-      const matchesSearch =
-        !searchLower ||
-        tab.title.toLowerCase().includes(searchLower) ||
-        tab.category.toLowerCase().includes(searchLower) ||
-        tab.originalTab.url?.toLowerCase().includes(searchLower);
-      if (!matchesSearch) return false;
-      if (activeStatusFilter === "active" && tab.status !== "Active")
-        return false;
-      if (activeStatusFilter === "inactive" && tab.status !== "Inactive")
-        return false;
-      return true;
-    })
-    .sort(
-      (a: DisplayTab, b: DisplayTab) =>
-        a.originalTab.index - b.originalTab.index
-    );
+  // This is for the currently OPENED accordion's TabsTable
+  const filteredAndSortedTabsForActiveWindow =
+    getFilteredTabsForWindow(tabsForActiveWindow);
 
   const totalSelectedTabsAcrossAllWindows = selectedTabIds.size;
   const activeWindowDetails =
@@ -207,10 +309,10 @@ function App() {
       ? groupedTabsByWindow.find((w) => w.windowId === activeWindowAccordionId)
       : null;
   const totalTabsInActiveWindowForDisplay = activeWindowDetails
-    ? activeWindowDetails.tabs.length
+    ? activeWindowDetails.originalTotalTabs
     : 0;
   const activeWindowNameForDisplay = activeWindowDetails
-    ? activeWindowDetails.windowName
+    ? activeWindowDetails.windowName.replace(" (Current)", "")
     : "N/A";
 
   return (
@@ -223,9 +325,15 @@ function App() {
           onSearchChange={setActiveSearchQuery}
           statusFilter={activeStatusFilter}
           onStatusFilterChange={setActiveStatusFilter}
+          pinnedFilter={activePinnedFilter}
+          onPinnedFilterChange={setActivePinnedFilter}
           onViewGroupTabs={handleBulkGroupSelectedTabs}
           selectedTabsCount={selectedTabIds.size}
           totalResultsCount={filteredAndSortedTabsForActiveWindow.length}
+          // Pass group filter related props
+          availableTabGroups={availableTabGroups || []} // Ensure it's an array
+          groupFilter={activeGroupFilter}
+          onGroupFilterChange={setActiveGroupFilter}
         />
         {isLoading && <p>Loading tabs...</p>}
         {error && <p style={{ color: "red" }}>{error}</p>}
@@ -239,34 +347,47 @@ function App() {
 
         {!isLoading && !error && groupedTabsByWindow.length > 0 && (
           <WindowAccordionListContainer>
-            {groupedTabsByWindow.map((windowGroup) => (
-              <WindowAccordionItem
-                key={windowGroup.windowId}
-                windowId={windowGroup.windowId}
-                windowName={windowGroup.windowName}
-                isActive={activeWindowAccordionId === windowGroup.windowId}
-                onToggle={() =>
-                  handleToggleAccordion(windowGroup.windowId, setSelectedTabIds)
-                }
-              >
-                {activeWindowAccordionId === windowGroup.windowId && (
-                  <TabsTable
-                    tabs={filteredAndSortedTabsForActiveWindow}
-                    selectedTabIds={selectedTabIds}
-                    onToggleSelectTab={handleToggleSelectTab}
-                    onSelectAllTabs={(selectAll) =>
-                      handleSelectAllTabsInActiveWindow(
-                        selectAll,
-                        tabsForActiveWindow
-                      )
-                    }
-                    onCloseTab={handleCloseTab}
-                    onPinTab={handlePinTab}
-                    onSwitchToTab={handleSwitchToTab}
-                  />
-                )}
-              </WindowAccordionItem>
-            ))}
+            {groupedTabsByWindow.map((windowGroup) => {
+              // Filter tabs for *this specific* windowGroup to get its count
+              const filteredTabsInThisWindow = getFilteredTabsForWindow(
+                windowGroup.tabs
+              );
+              const windowDisplayName = `${windowGroup.windowName} (${
+                filteredTabsInThisWindow.length
+              } tab${filteredTabsInThisWindow.length !== 1 ? "s" : ""} found)`;
+
+              return (
+                <WindowAccordionItem
+                  key={windowGroup.windowId}
+                  windowId={windowGroup.windowId}
+                  windowName={windowDisplayName} // Pass the dynamic name
+                  isActive={activeWindowAccordionId === windowGroup.windowId}
+                  onToggle={() =>
+                    handleToggleAccordion(
+                      windowGroup.windowId,
+                      setSelectedTabIds
+                    )
+                  }
+                >
+                  {activeWindowAccordionId === windowGroup.windowId && (
+                    <TabsTable
+                      tabs={filteredAndSortedTabsForActiveWindow} // This remains for the open accordion
+                      selectedTabIds={selectedTabIds}
+                      onToggleSelectTab={handleToggleSelectTab}
+                      onSelectAllTabs={(selectAll) =>
+                        handleSelectAllTabsInActiveWindow(
+                          selectAll,
+                          tabsForActiveWindow
+                        )
+                      }
+                      onCloseTab={handleCloseTab}
+                      onPinTab={handlePinTab}
+                      onSwitchToTab={handleSwitchToTab}
+                    />
+                  )}
+                </WindowAccordionItem>
+              );
+            })}
           </WindowAccordionListContainer>
         )}
       </MainContent>

@@ -73,7 +73,9 @@ const GroupNamingModal: React.FC<GroupNamingModalProps> = ({
           ref={inputRef}
           type="text"
           value={customName}
-          onChange={(e) => onCustomNameChange(e.target.value)}
+          onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+            onCustomNameChange(e.target.value)
+          }
           onKeyDown={handleKeyDown}
           placeholder="Enter group name"
           aria-label="Custom group name"

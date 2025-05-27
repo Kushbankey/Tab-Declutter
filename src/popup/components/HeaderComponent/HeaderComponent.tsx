@@ -16,15 +16,19 @@ interface HeaderComponentProps {
 const HeaderComponent: React.FC<HeaderComponentProps> = ({
   onOpenInNewTab,
 }) => {
-  const [isDetachedView, setIsDetachedView] = useState(false);
+  const [isDetachedView, setIsDetachedView] = useState(true);
 
   useEffect(() => {
     if (chrome.windows && chrome.windows.getCurrent) {
       chrome.windows.getCurrent({}, (currentWindow) => {
-        if (currentWindow.type !== "popup") {
+        if (currentWindow && currentWindow.type === "popup") {
+          setIsDetachedView(false);
+        } else {
           setIsDetachedView(true);
         }
       });
+    } else {
+      setIsDetachedView(true);
     }
   }, []);
 
@@ -40,11 +44,11 @@ const HeaderComponent: React.FC<HeaderComponentProps> = ({
       {isDetachedView && (
         <DetachButton
           onClick={onOpenInNewTab}
-          onKeyDown={(e) => {
+          onKeyDown={(e: React.KeyboardEvent<HTMLButtonElement>) => {
             if (e.key === "Enter" || e.key === " ") onOpenInNewTab();
           }}
           tabIndex={0}
-          aria-label="Open extension in a new window"
+          aria-label="Detach extension into a new window"
         >
           Detach View
         </DetachButton>
