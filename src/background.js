@@ -2,9 +2,13 @@
 
 let extensionTabId = null;
 let extensionWindowId = null; // To store the ID of the dedicated window
-const extensionPageUrl = chrome.runtime.getURL("index.html");
+// const extensionPageUrl = chrome.runtime.getURL("index.html"); // Original URL
+const detachedExtensionPageUrl = chrome.runtime.getURL(
+  "index.html?view=detached"
+); // URL for detached view
+const popupExtensionPageUrl = chrome.runtime.getURL("index.html"); // Standard URL for focusing existing tab if not detached initially
 
-const DETACHED_WINDOW_WIDTH = 900;
+const DETACHED_WINDOW_WIDTH = 1000; // Increased width to accommodate help panel
 const DETACHED_WINDOW_HEIGHT = 700;
 
 // Optional: Listener for when the extension is installed/updated
@@ -13,8 +17,8 @@ chrome.runtime.onInstalled.addListener(() => {});
 function openExtensionInNewWindow() {
   chrome.windows.create(
     {
-      url: extensionPageUrl,
-      type: "popup", // Consider "normal" if you want a standard window with toolbars
+      url: detachedExtensionPageUrl, // Use the URL with query param
+      type: "popup", // This type is fine, our logic will differentiate via URL query
       focused: true,
       width: DETACHED_WINDOW_WIDTH,
       height: DETACHED_WINDOW_HEIGHT,
@@ -61,7 +65,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             if (extensionTabId) {
               chrome.tabs.update(
                 extensionTabId,
-                { active: true, url: extensionPageUrl },
+                { active: true, url: detachedExtensionPageUrl }, // Ensure it focuses/reopens the detached view URL
                 (tab) => {
                   if (chrome.runtime.lastError) {
                     console.warn(
@@ -80,7 +84,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
               chrome.tabs.create(
                 {
                   windowId: extensionWindowId,
-                  url: extensionPageUrl,
+                  url: detachedExtensionPageUrl, // Open with detached view URL if tab was lost
                   active: true,
                 },
                 (newTabInExistingWindow) => {

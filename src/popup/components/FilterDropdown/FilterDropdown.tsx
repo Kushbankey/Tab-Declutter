@@ -28,6 +28,7 @@ interface FilterDropdownProps<T extends string> {
   defaultValue: T; // The value that means "no filter applied" or "all"
   onSelectionChange: (value: T) => void;
   onClearFilter: () => void;
+  dropdownWidth?: string;
 }
 
 // --- Component ---
@@ -40,6 +41,7 @@ const FilterDropdown = <T extends string>({
   defaultValue,
   onSelectionChange,
   onClearFilter,
+  dropdownWidth,
 }: FilterDropdownProps<T>) => {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -102,7 +104,11 @@ const FilterDropdown = <T extends string>({
         />
       </FilterButton>
       {isOpen && (
-        <DropdownMenu role="listbox" aria-label={`${filterKey} filter options`}>
+        <DropdownMenu
+          role="listbox"
+          aria-label={`${filterKey} filter options`}
+          width={dropdownWidth}
+        >
           {options.map((opt) => (
             <DropdownMenuItem
               key={opt.value}

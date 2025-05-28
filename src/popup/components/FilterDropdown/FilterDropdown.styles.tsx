@@ -34,7 +34,7 @@ export const ChevronIcon = styled.img`
   height: 20px;
 `;
 
-export const DropdownMenu = styled.div`
+export const DropdownMenu = styled.div<{ width?: string }>`
   position: absolute;
   top: 100%; // Below the button
   left: 0;
@@ -45,7 +45,8 @@ export const DropdownMenu = styled.div`
     0 2px 4px -1px rgba(0, 0, 0, 0.06);
   z-index: 20;
   margin-top: 4px;
-  min-width: 150px; // Adjusted min-width for better layout
+  min-width: ${({ width }) =>
+    width || "150px"}; // Adjusted min-width for better layout
   padding: 8px; // Internal padding
 `;
 

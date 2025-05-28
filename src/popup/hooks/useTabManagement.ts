@@ -139,6 +139,7 @@ export const useTabManagement = () => {
               id: group.title, // Use the group NAME as the ID for filtering purposes
               name: group.title,
               color: group.color,
+              numericId: group.id,
             });
           }
         });

@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useRef } from "react";
 import {
   ControlsContainer,
   LeftControls,
@@ -17,8 +17,12 @@ import {
   FilterPillText,
   FilterPillCloseIcon,
   ClearAllButton,
+  ManageGroupActionButtonStyled,
+  SaveSessionButtonStyled,
+  ViewToggleButtonStyled,
 } from "./HeaderControls.styles";
 import FilterDropdown, { FilterOption } from "../FilterDropdown/FilterDropdown";
+import GroupActionsDropdown from "../GroupActionsDropdown/GroupActionsDropdown";
 import { TabGroupForFilter, GroupFilterValue } from "../../types";
 
 // --- Component Props ---
@@ -38,6 +42,13 @@ interface HeaderControlsProps {
   onViewGroupTabs: () => void;
   selectedTabsCount: number;
   totalResultsCount: number;
+  onRequestRenameGroup: (group: TabGroupForFilter) => void;
+  onRequestUngroupTabs: (group: TabGroupForFilter) => void;
+  onRequestDeleteGroupAndTabs: (group: TabGroupForFilter) => void;
+  onClearAllFilters: () => void;
+  onSaveSessionRequest: () => void;
+  currentView: "tabs" | "sessions";
+  onToggleView: () => void;
 }
 
 // --- Component ---
@@ -55,7 +66,20 @@ const HeaderControls: React.FC<HeaderControlsProps> = ({
   onViewGroupTabs,
   selectedTabsCount,
   totalResultsCount,
+  onRequestRenameGroup,
+  onRequestUngroupTabs,
+  onRequestDeleteGroupAndTabs,
+  onClearAllFilters,
+  onSaveSessionRequest,
+  currentView,
+  onToggleView,
 }) => {
+  const [groupActionsDropdownOpen, setGroupActionsDropdownOpen] =
+    useState(false);
+  const [selectedGroupForAction, setSelectedGroupForAction] =
+    useState<TabGroupForFilter | null>(null);
+  const manageGroupButtonRef = useRef<HTMLButtonElement>(null);
+
   const statusOptions: FilterOption<StatusFilterType>[] = [
     { value: "all", label: "All" },
     { value: "active", label: "Active", pillLabel: "Status: Active" },
@@ -78,12 +102,8 @@ const HeaderControls: React.FC<HeaderControlsProps> = ({
 
   const handleClearGroupFilter = () => {
     onGroupFilterChange("all");
-  };
-
-  const handleClearAllFilters = () => {
-    onStatusFilterChange("all");
-    onPinnedFilterChange("all");
-    onGroupFilterChange("all");
+    setGroupActionsDropdownOpen(false);
+    setSelectedGroupForAction(null);
   };
 
   const activeStatusOption = statusOptions.find(
@@ -105,35 +125,48 @@ const HeaderControls: React.FC<HeaderControlsProps> = ({
           : `Group: ${group.name}`,
     }));
 
-  const activeGroupOption = groupFilterOptions.find(
-    (opt) => opt.value === groupFilter
+  const currentActiveGroupFilterDetails = availableTabGroups.find(
+    (g) => g.id === groupFilter
   );
+
+  const handleManageGroupClick = () => {
+    if (currentActiveGroupFilterDetails?.numericId) {
+      setSelectedGroupForAction(currentActiveGroupFilterDetails);
+      setGroupActionsDropdownOpen(true);
+    } else {
+      console.warn("Manage group clicked for a non-manageable group filter.");
+    }
+  };
 
   const isAnyFilterActive =
     statusFilter !== "all" || pinnedFilter !== "all" || groupFilter !== "all";
 
+  const showManageGroupButton = !!currentActiveGroupFilterDetails?.numericId;
+
   return (
     <>
       <ControlsContainer>
-        <LeftControls>
-          <SearchContainer>
-            <SearchIcon
-              src={chrome.runtime.getURL("magnifying-glass-light.svg")}
-              alt="Search"
-            />
-            <SearchInputStyled
-              type="text"
-              placeholder="Search tabs..."
-              value={searchQuery}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                onSearchChange(e.target.value)
-              }
-              aria-label="Search tabs by title, category, or URL"
-            />
-          </SearchContainer>
-        </LeftControls>
+        {currentView === "tabs" && (
+          <LeftControls>
+            <SearchContainer>
+              <SearchIcon
+                src={chrome.runtime.getURL("magnifying-glass-light.svg")}
+                alt="Search"
+              />
+              <SearchInputStyled
+                type="text"
+                placeholder="Search tabs..."
+                value={searchQuery}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                  onSearchChange(e.target.value)
+                }
+                aria-label="Search tabs by title, category, or URL"
+              />
+            </SearchContainer>
+          </LeftControls>
+        )}
         <RightControls>
-          {selectedTabsCount > 0 && (
+          {currentView === "tabs" && selectedTabsCount > 0 && (
             <GroupButton
               onClick={onViewGroupTabs}
               disabled={selectedTabsCount === 0}
@@ -141,109 +174,173 @@ const HeaderControls: React.FC<HeaderControlsProps> = ({
               Group Selected ({selectedTabsCount})
             </GroupButton>
           )}
+          <SaveSessionButtonStyled onClick={onSaveSessionRequest}>
+            Save Session
+          </SaveSessionButtonStyled>
+          <ViewToggleButtonStyled onClick={onToggleView}>
+            {currentView === "tabs"
+              ? "View Saved Sessions"
+              : "View Current Tabs"}
+          </ViewToggleButtonStyled>
         </RightControls>
       </ControlsContainer>
 
-      <FiltersContainer>
-        <FilterDropdownsRow>
-          <FilterLabel>Filter by:</FilterLabel>
-          <FilterDropdown
-            filterKey="status"
-            buttonLabelPrefix="Tab Status"
-            options={statusOptions}
-            selectedValue={statusFilter}
-            defaultValue="all"
-            onSelectionChange={onStatusFilterChange}
-            onClearFilter={handleClearStatusFilter}
-          />
-          <FilterDropdown
-            filterKey="pinned"
-            buttonLabelPrefix="Pinned Status"
-            options={pinnedOptions}
-            selectedValue={pinnedFilter}
-            defaultValue="all"
-            onSelectionChange={onPinnedFilterChange}
-            onClearFilter={handleClearPinnedFilter}
-          />
-          <FilterDropdown
-            filterKey="group"
-            buttonLabelPrefix="Tab Group"
-            options={groupFilterOptions}
-            selectedValue={groupFilter}
-            defaultValue="all"
-            onSelectionChange={onGroupFilterChange}
-            onClearFilter={handleClearGroupFilter}
-          />
-        </FilterDropdownsRow>
+      {currentView === "tabs" && (
+        <FiltersContainer>
+          <FilterDropdownsRow>
+            <FilterLabel>Filter by:</FilterLabel>
+            <FilterDropdown
+              filterKey="status"
+              buttonLabelPrefix="Tab Status"
+              options={statusOptions}
+              selectedValue={statusFilter}
+              defaultValue="all"
+              onSelectionChange={onStatusFilterChange}
+              onClearFilter={handleClearStatusFilter}
+            />
+            <FilterDropdown
+              filterKey="pinned"
+              buttonLabelPrefix="Pinned Status"
+              options={pinnedOptions}
+              selectedValue={pinnedFilter}
+              defaultValue="all"
+              onSelectionChange={onPinnedFilterChange}
+              onClearFilter={handleClearPinnedFilter}
+            />
+            <FilterDropdown
+              filterKey="group"
+              buttonLabelPrefix="Tab Group"
+              options={groupFilterOptions}
+              selectedValue={groupFilter}
+              defaultValue="all"
+              onSelectionChange={(value) => {
+                onGroupFilterChange(value);
+                const selectedGroup = availableTabGroups.find(
+                  (g) => g.id === value
+                );
+                if (!selectedGroup?.numericId) {
+                  setGroupActionsDropdownOpen(false);
+                  setSelectedGroupForAction(null);
+                }
+              }}
+              onClearFilter={handleClearGroupFilter}
+              dropdownWidth="200px"
+            />
+            {showManageGroupButton && (
+              <ManageGroupActionButtonStyled
+                ref={manageGroupButtonRef}
+                onClick={handleManageGroupClick}
+                aria-haspopup="true"
+                aria-expanded={groupActionsDropdownOpen}
+                aria-label={`Manage group: ${currentActiveGroupFilterDetails?.name}`}
+              >
+                Manage "{currentActiveGroupFilterDetails?.name}"
+              </ManageGroupActionButtonStyled>
+            )}
+          </FilterDropdownsRow>
 
-        {isAnyFilterActive && (
-          <ActiveFiltersDisplay>
-            <ResultsCount>{totalResultsCount} results found</ResultsCount>
-            <FilterPillsList>
-              {activeStatusOption &&
-                activeStatusOption.value !== "all" &&
-                activeStatusOption.pillLabel && (
-                  <FilterPill>
-                    <FilterPillText>
-                      {activeStatusOption.pillLabel}
-                    </FilterPillText>
-                    <FilterPillCloseIcon
-                      src={chrome.runtime.getURL("cross.svg")}
-                      alt={`Remove ${activeStatusOption.label} filter`}
-                      onClick={handleClearStatusFilter}
-                      tabIndex={0}
-                      onKeyDown={(e: React.KeyboardEvent<HTMLImageElement>) => {
-                        if (e.key === "Enter" || e.key === " ")
-                          handleClearStatusFilter();
-                      }}
-                    />
-                  </FilterPill>
-                )}
-              {activePinnedOption &&
-                activePinnedOption.value !== "all" &&
-                activePinnedOption.pillLabel && (
-                  <FilterPill>
-                    <FilterPillText>
-                      {activePinnedOption.pillLabel}
-                    </FilterPillText>
-                    <FilterPillCloseIcon
-                      src={chrome.runtime.getURL("cross.svg")}
-                      alt={`Remove ${activePinnedOption.label} filter`}
-                      onClick={handleClearPinnedFilter}
-                      tabIndex={0}
-                      onKeyDown={(e: React.KeyboardEvent<HTMLImageElement>) => {
-                        if (e.key === "Enter" || e.key === " ")
-                          handleClearPinnedFilter();
-                      }}
-                    />
-                  </FilterPill>
-                )}
-              {activeGroupOption &&
-                activeGroupOption.value !== "all" &&
-                activeGroupOption.pillLabel && (
-                  <FilterPill>
-                    <FilterPillText>
-                      {activeGroupOption.pillLabel}
-                    </FilterPillText>
-                    <FilterPillCloseIcon
-                      src={chrome.runtime.getURL("cross.svg")}
-                      alt={`Remove ${activeGroupOption.label} filter`}
-                      onClick={handleClearGroupFilter}
-                      tabIndex={0}
-                      onKeyDown={(e: React.KeyboardEvent<HTMLImageElement>) => {
-                        if (e.key === "Enter" || e.key === " ")
-                          handleClearGroupFilter();
-                      }}
-                    />
-                  </FilterPill>
-                )}
-            </FilterPillsList>
-            <ClearAllButton onClick={handleClearAllFilters}>
-              Clear All
-            </ClearAllButton>
-          </ActiveFiltersDisplay>
-        )}
-      </FiltersContainer>
+          {isAnyFilterActive && (
+            <ActiveFiltersDisplay>
+              <ResultsCount>{totalResultsCount} results found</ResultsCount>
+              <FilterPillsList>
+                {activeStatusOption &&
+                  activeStatusOption.value !== "all" &&
+                  activeStatusOption.pillLabel && (
+                    <FilterPill>
+                      <FilterPillText>
+                        {activeStatusOption.pillLabel}
+                      </FilterPillText>
+                      <FilterPillCloseIcon
+                        src={chrome.runtime.getURL("cross.svg")}
+                        alt={`Remove ${activeStatusOption.label} filter`}
+                        onClick={handleClearStatusFilter}
+                        tabIndex={0}
+                        onKeyDown={(
+                          e: React.KeyboardEvent<HTMLImageElement>
+                        ) => {
+                          if (e.key === "Enter" || e.key === " ")
+                            handleClearStatusFilter();
+                        }}
+                      />
+                    </FilterPill>
+                  )}
+                {activePinnedOption &&
+                  activePinnedOption.value !== "all" &&
+                  activePinnedOption.pillLabel && (
+                    <FilterPill>
+                      <FilterPillText>
+                        {activePinnedOption.pillLabel}
+                      </FilterPillText>
+                      <FilterPillCloseIcon
+                        src={chrome.runtime.getURL("cross.svg")}
+                        alt={`Remove ${activePinnedOption.label} filter`}
+                        onClick={handleClearPinnedFilter}
+                        tabIndex={0}
+                        onKeyDown={(
+                          e: React.KeyboardEvent<HTMLImageElement>
+                        ) => {
+                          if (e.key === "Enter" || e.key === " ")
+                            handleClearPinnedFilter();
+                        }}
+                      />
+                    </FilterPill>
+                  )}
+                {currentActiveGroupFilterDetails &&
+                  currentActiveGroupFilterDetails.id !== "all" &&
+                  groupFilterOptions.find(
+                    (opt) => opt.value === currentActiveGroupFilterDetails.id
+                  )?.pillLabel && (
+                    <FilterPill>
+                      <FilterPillText>
+                        {
+                          groupFilterOptions.find(
+                            (opt) =>
+                              opt.value === currentActiveGroupFilterDetails.id
+                          )?.pillLabel
+                        }
+                      </FilterPillText>
+                      <FilterPillCloseIcon
+                        src={chrome.runtime.getURL("cross.svg")}
+                        alt={`Remove ${currentActiveGroupFilterDetails.name} filter`}
+                        onClick={handleClearGroupFilter}
+                        tabIndex={0}
+                        onKeyDown={(
+                          e: React.KeyboardEvent<HTMLImageElement>
+                        ) => {
+                          if (e.key === "Enter" || e.key === " ")
+                            handleClearGroupFilter();
+                        }}
+                      />
+                    </FilterPill>
+                  )}
+              </FilterPillsList>
+              <ClearAllButton onClick={onClearAllFilters}>
+                Clear All
+              </ClearAllButton>
+            </ActiveFiltersDisplay>
+          )}
+        </FiltersContainer>
+      )}
+
+      {currentView === "tabs" && selectedGroupForAction && (
+        <GroupActionsDropdown
+          isOpen={groupActionsDropdownOpen}
+          onClose={() => setGroupActionsDropdownOpen(false)}
+          onRename={() => {
+            onRequestRenameGroup(selectedGroupForAction);
+            setGroupActionsDropdownOpen(false);
+          }}
+          onUngroup={() => {
+            onRequestUngroupTabs(selectedGroupForAction);
+            setGroupActionsDropdownOpen(false);
+          }}
+          onDeleteAndClose={() => {
+            onRequestDeleteGroupAndTabs(selectedGroupForAction);
+            setGroupActionsDropdownOpen(false);
+          }}
+          anchorElement={manageGroupButtonRef.current}
+        />
+      )}
     </>
   );
 };

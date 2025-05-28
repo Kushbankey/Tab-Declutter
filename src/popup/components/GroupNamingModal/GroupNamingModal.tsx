@@ -11,30 +11,38 @@ import {
 
 interface GroupNamingModalProps {
   isOpen: boolean;
-  suggestedName: string;
+  modalTitle: string;
+  initialInputText: string;
+  confirmButtonText: string;
   customName: string;
   onCustomNameChange: (name: string) => void;
   onConfirm: () => void;
   onCancel: () => void;
+  showSuggestedText?: boolean;
 }
 
 const GroupNamingModal: React.FC<GroupNamingModalProps> = ({
   isOpen,
-  suggestedName,
+  modalTitle,
+  initialInputText,
+  confirmButtonText,
   customName,
   onCustomNameChange,
   onConfirm,
   onCancel,
+  showSuggestedText = true,
 }) => {
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (isOpen && inputRef.current) {
-      inputRef.current.focus();
-      // Select the text in the input field for easy editing
-      inputRef.current.select();
+    if (isOpen) {
+      onCustomNameChange(initialInputText);
+      if (inputRef.current) {
+        inputRef.current.focus();
+        inputRef.current.select();
+      }
     }
-  }, [isOpen]);
+  }, [isOpen, initialInputText, onCustomNameChange]);
 
   if (!isOpen) return null;
 
@@ -63,12 +71,13 @@ const GroupNamingModal: React.FC<GroupNamingModalProps> = ({
       aria-labelledby="group-name-dialog-title"
     >
       <ModalDialog onClick={handleDialogClick}>
-        <ModalTitle id="group-name-dialog-title">
-          Name Your Chrome Group
-        </ModalTitle>
-        <SuggestedNameText>
-          Suggested: <span style={{ fontWeight: "bold" }}>{suggestedName}</span>
-        </SuggestedNameText>
+        <ModalTitle id="group-name-dialog-title">{modalTitle}</ModalTitle>
+        {showSuggestedText && (
+          <SuggestedNameText>
+            Suggested:{" "}
+            <span style={{ fontWeight: "bold" }}>{initialInputText}</span>
+          </SuggestedNameText>
+        )}
         <GroupNameInput
           ref={inputRef}
           type="text"
@@ -94,7 +103,7 @@ const GroupNamingModal: React.FC<GroupNamingModalProps> = ({
             onClick={onConfirm}
             disabled={customName.trim() === ""}
           >
-            Confirm & Create Group
+            {confirmButtonText}
           </ModalButton>
         </ModalActions>
       </ModalDialog>

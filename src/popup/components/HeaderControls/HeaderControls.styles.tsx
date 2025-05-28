@@ -167,3 +167,69 @@ export const ClearAllButton = styled.button`
     background-color: #f3f4f6; // Slight hover background
   }
 `;
+
+export const ManageGroupActionButtonStyled = styled.button`
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  font-size: 14px;
+  font-weight: 500;
+  border: 1px solid #d1d5db; // Gray-300 (standard border)
+  border-radius: 6px;
+  background-color: #ffffff; // White background (standard)
+  color: #111827; // Gray-900 text (standard)
+  cursor: pointer;
+  user-select: none;
+
+  &:hover {
+    background-color: #f9fafb; // Gray-50 on hover
+  }
+
+  // &.active or &:focus-visible might be needed if it stays visually active
+  // For now, matching FilterButton general appearance.
+  // If it should look active when dropdown is open, add similar .active style as FilterButton
+`;
+
+export const SaveSessionButtonStyled = styled.button`
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  font-size: 14px;
+  font-weight: 500;
+  border: 1px solid #16a34a; // Green-600
+  border-radius: 6px;
+  background-color: #16a34a; // Green-600
+  color: white;
+  cursor: pointer;
+
+  &:hover {
+    background-color: #15803d; // Green-700
+  }
+
+  &:disabled {
+    background-color: #9ca3af; // Gray-400
+    border-color: #9ca3af;
+    color: #e5e7eb; // Lighter text for disabled state
+    cursor: not-allowed;
+  }
+`;
+
+export const ViewToggleButtonStyled = styled.button`
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  font-size: 14px;
+  font-weight: 500;
+  border: 1px solid #6b7280; // Gray-500 (neutral)
+  border-radius: 6px;
+  background-color: #ffffff; // White background
+  color: #374151; // Gray-700 text
+  cursor: pointer;
+
+  &:hover {
+    background-color: #f3f4f6; // Gray-100 on hover
+  }
+`;
