@@ -176,30 +176,26 @@ export const ActionButton = styled.button`
   cursor: pointer;
   color: #6b7280; // Medium gray
   border-radius: 4px;
+  display: flex; // Added for centering
+  align-items: center; // Added for centering
+  justify-content: center; // Added for centering
+  width: 24px; // Added for explicit size
+  height: 24px; // Added for explicit size
 
   &:hover {
     background-color: #f3f4f6; // Light gray hover
     color: #1f2937; // Darker gray text on hover
   }
-
-  &::after {
-    content: "...";
-    font-size: 18px;
-    font-weight: bold;
-    line-height: 1;
-  }
 `;
 
 export const ActionMenu = styled.div`
-  position: absolute;
-  right: 16px;
-  top: 40px;
+  position: fixed;
   background-color: white;
   border: 1px solid #e5e7eb;
   border-radius: 6px;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1),
     0 2px 4px -1px rgba(0, 0, 0, 0.06);
-  z-index: 10;
+  z-index: 1050;
   min-width: 120px;
 `;
 

@@ -24,7 +24,7 @@ const FooterComponent: React.FC<FooterComponentProps> = ({
             Context: {activeWindowName} ({totalTabsInActiveWindow} tabs in view)
           </div>
         )}
-      <div>Rows per page: N/A</div>
+      {/* <div>Rows per page: N/A</div> */}
     </Footer>
   );
 };

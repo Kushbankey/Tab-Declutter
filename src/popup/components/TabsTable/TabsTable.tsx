@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import {
   TableWrapper,
   StyledTable,
@@ -41,10 +42,54 @@ const TabsTable: React.FC<TabsTableProps> = ({
   onSwitchToTab,
 }) => {
   const [activeActionMenu, setActiveActionMenu] = useState<number | null>(null);
+  const [menuPosition, setMenuPosition] = useState<{
+    top: number;
+    left: number;
+  } | null>(null);
+  const actionMenuRef = useRef<HTMLDivElement>(null);
+  const actionButtonRefs = useRef<Record<number, HTMLButtonElement | null>>({});
 
   const handleToggleActionMenu = (tabId: number) => {
-    setActiveActionMenu((prev) => (prev === tabId ? null : tabId));
+    setActiveActionMenu((prev) => {
+      const newActiveId = prev === tabId ? null : tabId;
+      if (newActiveId !== null) {
+        const buttonElement = actionButtonRefs.current[tabId];
+        if (buttonElement) {
+          const rect = buttonElement.getBoundingClientRect();
+          setMenuPosition({
+            top: rect.bottom + window.scrollY,
+            left: rect.left + window.scrollX - 100,
+          });
+        }
+      } else {
+        setMenuPosition(null);
+      }
+      return newActiveId;
+    });
   };
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (activeActionMenu === null) return;
+
+      const menuNode = actionMenuRef.current;
+      const buttonNode = actionButtonRefs.current[activeActionMenu];
+
+      if (
+        menuNode &&
+        !menuNode.contains(event.target as Node) &&
+        buttonNode &&
+        !buttonNode.contains(event.target as Node)
+      ) {
+        setActiveActionMenu(null);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [activeActionMenu]);
 
   const isAllSelected =
     tabs.length > 0 && tabs.every((tab) => selectedTabIds.has(tab.id));
@@ -141,49 +186,86 @@ const TabsTable: React.FC<TabsTableProps> = ({
                   {tab.status}
                 </StatusBadge>
               </TD>
-              <TD className="actions-cell" style={{ position: "relative" }}>
+              <TD
+                className="actions-cell"
+                style={{
+                  position: "relative",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
                 <ActionButton
+                  ref={(el) => (actionButtonRefs.current[tab.id] = el)}
                   onClick={() => handleToggleActionMenu(tab.id)}
                   aria-haspopup="true"
                   aria-expanded={activeActionMenu === tab.id}
                   aria-label={`Actions for tab: ${tab.title}`}
-                />
-                {activeActionMenu === tab.id && (
-                  <ActionMenu role="menu">
-                    <ActionMenuItem
-                      role="menuitem"
-                      onClick={() => {
-                        onSwitchToTab(tab.id, tab.originalTab.windowId);
-                        setActiveActionMenu(null);
-                      }}
-                    >
-                      Switch to Tab
-                    </ActionMenuItem>
-                    <ActionMenuItem
-                      role="menuitem"
-                      onClick={() => {
-                        onPinTab(tab.id, tab.originalTab.pinned);
-                        setActiveActionMenu(null);
-                      }}
-                    >
-                      {tab.originalTab.pinned ? "Unpin Tab" : "Pin Tab"}
-                    </ActionMenuItem>
-                    <ActionMenuItem
-                      role="menuitem"
-                      onClick={() => {
-                        onCloseTab(tab.id);
-                        setActiveActionMenu(null);
-                      }}
-                    >
-                      Close Tab
-                    </ActionMenuItem>
-                  </ActionMenu>
-                )}
+                >
+                  <img
+                    src={chrome.runtime.getURL("ellipsis-vertical.svg")}
+                    alt="Actions"
+                    style={{ width: "16px", height: "16px" }}
+                  />
+                </ActionButton>
               </TD>
             </TR>
           ))}
         </TBody>
       </StyledTable>
+      {activeActionMenu !== null &&
+        menuPosition &&
+        actionButtonRefs.current[activeActionMenu] &&
+        createPortal(
+          <ActionMenu
+            ref={actionMenuRef}
+            role="menu"
+            style={{
+              top: `${menuPosition.top}px`,
+              left: `${menuPosition.left}px`,
+            }}
+          >
+            <ActionMenuItem
+              role="menuitem"
+              onClick={() => {
+                if (activeActionMenu === null) return;
+                onSwitchToTab(
+                  activeActionMenu,
+                  tabs.find((t) => t.id === activeActionMenu)!.originalTab
+                    .windowId
+                );
+                setActiveActionMenu(null);
+              }}
+            >
+              Switch to Tab
+            </ActionMenuItem>
+            <ActionMenuItem
+              role="menuitem"
+              onClick={() => {
+                if (activeActionMenu === null) return;
+                const currentTab = tabs.find((t) => t.id === activeActionMenu);
+                if (currentTab)
+                  onPinTab(activeActionMenu, currentTab.originalTab.pinned);
+                setActiveActionMenu(null);
+              }}
+            >
+              {tabs.find((t) => t.id === activeActionMenu)?.originalTab.pinned
+                ? "Unpin Tab"
+                : "Pin Tab"}
+            </ActionMenuItem>
+            <ActionMenuItem
+              role="menuitem"
+              onClick={() => {
+                if (activeActionMenu === null) return;
+                onCloseTab(activeActionMenu);
+                setActiveActionMenu(null);
+              }}
+            >
+              Close Tab
+            </ActionMenuItem>
+          </ActionMenu>,
+          document.body
+        )}
     </TableWrapper>
   );
 };
