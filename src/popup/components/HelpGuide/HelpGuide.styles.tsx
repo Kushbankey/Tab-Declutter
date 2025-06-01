@@ -91,7 +91,7 @@ export const Tip = styled.div`
 `;
 
 export const IconImage = styled.img`
-  width: 24px;
-  height: 24px;
+  width: 32px;
+  height: 32px;
   vertical-align: middle;
 `;

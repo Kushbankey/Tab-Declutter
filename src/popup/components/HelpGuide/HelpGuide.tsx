@@ -18,7 +18,7 @@ const HelpGuideComponent: React.FC = () => {
     <GuideContainer>
       <GuideTitle>
         <IconImage
-          src={chrome.runtime.getURL("broom.svg")}
+          src={chrome.runtime.getURL("broom64.png")}
           alt="TabDeclutter Icon"
         />
         TabDeclutter Help Guide

@@ -35,8 +35,8 @@ export const SubMessage = styled.p`
 `;
 
 export const Icon = styled.img<{ size?: number }>`
-  width: ${(props) => props.size || 24}px;
-  height: ${(props) => props.size || 24}px;
+  width: ${(props) => props.size || 32}px;
+  height: ${(props) => props.size || 32}px;
 `;
 
 export const DetachButton = styled.button`

@@ -36,7 +36,10 @@ const HeaderComponent: React.FC<HeaderComponentProps> = ({
     <Header>
       <HeaderTextContainer>
         <HeaderTopLine>
-          <Icon src={chrome.runtime.getURL("broom.svg")} alt="Declutter Icon" />
+          <Icon
+            src={chrome.runtime.getURL("broom64.png")}
+            alt="Declutter Icon"
+          />
           <WelcomeMessage>Your Windows & Tabs</WelcomeMessage>
         </HeaderTopLine>
         <SubMessage>Manage your browser sessions.</SubMessage>
