@@ -4,15 +4,15 @@
   "version": "1.0",
   "action": {
     "default_popup": "index.html",
-    "default_icon": "icon.png"
+    "default_icon": "broom.png"
   },
   "permissions": ["tabs", "storage", "tabGroups"],
   "background": {
     "service_worker": "background.js"
   },
   "icons": {
-    "16": "icon16.png",
-    "48": "icon48.png",
-    "128": "icon128.png"
+    "16": "broom.png",
+    "48": "broom.png",
+    "128": "broom.png"
   }
 }
